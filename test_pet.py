@@ -19,14 +19,30 @@ def test_pet_schema():
     # Validate the response schema against the defined schema in schemas.py
     validate(instance=response.json(), schema=schemas.pet)
 
-'''
-TODO: Finish this test by...
-1) Extending the parameterization to include all available statuses
-2) Validate the appropriate response code
-3) Validate the 'status' property in the response is equal to the expected status
-4) Validate the schema for each object in the response
-'''
-@pytest.mark.parametrize("status", [("available")])
+import jsonschema
+
+# Define the schema for a pet object
+pet_schema = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "type": {"type": "string"},
+        "status": {"type": "string"},
+        # Add more properties as needed
+    },
+    "required": ["id", "name", "type", "status"]  # Ensure required properties are present
+}
+
+def validate_pet_schema(pet):
+    # Validate the pet object against the schema
+    try:
+        jsonschema.validate(instance=pet, schema=schemas.pet)
+    except jsonschema.ValidationError as e:
+        raise AssertionError(f"Validation error for pet: {e}")
+
+
+@pytest.mark.parametrize("status", [("available", "pending")])
 def test_find_by_status_200(status):
     test_endpoint = "/pets/findByStatus"
     params = {
@@ -34,13 +50,27 @@ def test_find_by_status_200(status):
     }
 
     response = api_helpers.get_api_data(test_endpoint, params)
-    # TODO...
+    
+    # Validate the response code is 200 OK
+    assert response.status_code == 200, f"Response code is not 200 OK: {response.status_code}"
+    # Parse the response JSON
+    response_json = response.json()
 
-'''
-TODO: Finish this test by...
-1) Testing and validating the appropriate 404 response for /pets/{pet_id}
-2) Parameterizing the test for any edge cases
-'''
+    # Validate the 'status' property in each object in the response
+    for pet in response_json:
+        assert pet["status"] in status, f"Unexpected 'status' property in the response: {pet['status']}"
+
+    # Validate the schema for each object in the response
+    for pet in response_json:
+        validate_pet_schema(pet)
+
+
 def test_get_by_id_404():
-    # TODO...
-    pass
+    test_endpoint = "/pets/{pet_id}"  # Replace with the actual endpoint
+    non_existing_pet_id = 999999  # Use a non-existing pet ID
+
+    # Send a request to the API endpoint with a non-existing pet ID
+    response = api_helpers.get_api_data(test_endpoint.format(pet_id=non_existing_pet_id))
+
+    # Validate the response code is 404 Not Found
+    assert response.status_code == 404, f"Response code is not 404: {response.status_code}"

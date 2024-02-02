@@ -1,4 +1,4 @@
-import uuid
+import uuid, json
 from flask import Flask, request
 from flask_restx import Api, Resource, fields, Namespace
 
@@ -111,13 +111,12 @@ class OrderResource(Resource):
     @store_ns.marshal_with(order_model, code=201)
     def post(self):
         """Place a new order"""
-        order_data = api.payload
+        order_data = json.loads(api.payload)
         pet_id = order_data.get('pet_id')
         pet = next((pet for pet in pets if pet['id'] == pet_id), None)
 
         if pet is None:
             api.abort(404, f"No pet found with ID {pet_id}")
-        
         if pet['status'] != 'available':
             api.abort(400, f"Pet with ID {pet_id} is not available for order")
 
